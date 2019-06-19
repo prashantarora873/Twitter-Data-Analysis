@@ -1,0 +1,103 @@
+                                           ##################################################################################
+                                           #                                                                                #
+                                           #                     Installing and Configuring Apache Flumes                   #
+                                           #                                                                                #
+                                           ##################################################################################
+
+
+
+
+INSTALLING
+
+Step 1: Download Flume from the below link:
+http://www.apache.org/dyn/closer.lua/flume/1.6.0/apache-flume-1.6.0-bin.tar.gz
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 2: Untar the downloaded setup, after moving the setup to the desired location, extracted Apache flume file:
+
+tar xzf apache-flume-1.8.0-bin.tar.gz
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 3: Edit the “.bashrc” file, to edit .bashrc file we will use below command:
+nano.baschrc command Add the path of your Apache Flume directory FLUME_HOME path on it:
+
+export FLUME_HOME=/usr/lib/apache-flume-1.8.0-bin/
+export PATH=$PATH:$FLUME_HOME/bin/
+
+/usr/lib/apache- flume-1.8.0-bin/ is the path of my apache flume.
+
+Press ctrl+x and then press Y , now refresh the.bashrc file . To refresh .bashrc file execute this command:
+
+Source .bashrc
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 4: Inorder to verify that flume has been successfully execute the below command to get options to include with flume-ng
+
+flume-ng –help
+
+
+
+
+
+
+################################################################################################################################################################
+
+
+CONFIGURING
+
+Step 1: Create an access.log file in your home directory and add data in it and save it.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Step 2: Create a file flume.conf file inside /home/dataflair/apache-flume-1.6.0-bin/conf and add the following parameters in it:
+
+# Naming the components on the current agent.
+TwitterAgent.sources = Twitter
+TwitterAgent.channels = MemChannel
+TwitterAgent.sinks = HDFS
+
+# Describing/Configuring the source
+TwitterAgent.sources.Twitter.type = org.apache.flume.source.twitter.TwitterSource
+TwitterAgent.sources.Twitter.consumerKey = Your consumer key
+TwitterAgent.sources.Twitter.consumerSecret = Your consumer secret key
+TwitterAgent.sources.Twitter.accessToken = Your consumer key access token
+TwitterAgent.sources.Twitter.accessTokenSecret = Your consumer key access token secret
+TwitterAgent.sources.Twitter.keywords = elections2019
+
+# Describing/Configuring the sink
+TwitterAgent.sinks.HDFS.type = hdfs
+TwitterAgent.sinks.HDFS.hdfs.path = hdfs://localhost:9000/user/Hadoop/twitter_data/
+TwitterAgent.sinks.HDFS.hdfs.fileType = DataStream
+TwitterAgent.sinks.HDFS.hdfs.writeFormat = Text
+TwitterAgent.sinks.HDFS.hdfs.batchSize = 1000
+TwitterAgent.sinks.HDFS.hdfs.rollSize = 0
+TwitterAgent.sinks.HDFS.hdfs.rollCount = 10000
+
+# Describing/Configuring the channel
+TwitterAgent.channels.MemChannel.type = memory
+TwitterAgent.channels.MemChannel.capacity = 10000
+TwitterAgent.channels.MemChannel.transactionCapacity
+= 100
+
+# Binding the source and sink to the channel
+TwitterAgent.sources.Twitter.channels = MemChannel
+TwitterAgent.sinks.HDFS.channel = MemChannel
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 3: The following command will run the agent specified in the flume.conf file with source and destination addresses.
+
+bin/flume-ng agent –conf ./conf/ -f conf/flume.conf Dflume.root=DEBUG,console -n TwitterAgent
+
+The agent name is specified by -n TwitterAgent and must match an agent name given in -f conf/flume.conf
+
+
+In order to check whether data got copied in HDFS, you can either use web console
+(http://localhost:50070) or from the command prompt view files present in HDFS.
+In this way , data is copied into Hdfs using Flume
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+You can check the copied data in HDFS by going to Utilities drop menu and selecting 'Browse files' and entering the path '/flume' which was specified in the flume.conf file.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------

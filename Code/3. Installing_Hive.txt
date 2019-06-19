@@ -1,0 +1,141 @@
+                                           ##################################################################################
+                                           #                                                                                #
+                                           #                     Installing and Configuring Apache Hive                     #
+                                           #                                                                                #
+                                           ##################################################################################
+
+
+
+INSTALLING
+
+Step 1:- Download Hive
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 2:- Extract it
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 3:- Download mysql-connector-java-5.1.30 extract it and copy 
+mysql-connector-java-5.1.30-bin.jar to lib directory in Hive
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+Step 4:- Delete log4j-slf4j- impl-2.4.1.jar jar file from lib directory which is under Apache-Hive-0.14.0-bin folder
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 5:- Start Hadoop and create HDFS directories
+
+$start-dfs.sh
+$start-yarn.sh
+$hdfs dfs -mkdir -p /user/hive/warehouse
+$hdfs dfs -mkdir -p /tmp/hive
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 6:- Change Directory Permissions
+
+$hdfs dfs -chmod 777 /tmp/
+$hdfs dfs -chmod 777 /user/hive/warehouse
+$hdfs dfs -chmod 777 /tmp/hive
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 7:- Install mysql
+
+$sudo apt-get install mysql-server
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 8:- Create Database Metastore
+
+sudo mysql -u root -p
+Enter password:
+mysql> CREATE DATABASE metastore_db;
+mysql> USE metastore_db;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 9:- Create Hiveuser and Hivepassword
+
+mysql> CREATE USER 'hiveuser'@'%' IDENTIFIED BY 'hivepassword';
+mysql> GRANT all on *.* to 'hiveuser'@localhost identified by 'hivepassword';
+mysql> flush privileges;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 10 :- Get into conf directory under apache-hive-2.1.1-bin folder and rename hive-default.xml.template to hive-site.xml and hive-env.sh.template to hive-env.sh
+
+1. In hive-site.xml
+
+Change the following properties:
+
+a) ConnectionURL
+<name>javax.jdo.option.ConnectionURL</name>
+<value>jdbc:mysql://localhost/metastoredb?createDatabaseIfNotExist=true</value>
+
+b) ConnectionUserName
+<name>javax.jdo.option.ConnectionUserName</name>
+<value>hiveuser</value>
+
+c) ConnectionPassword
+<name>javax.jdo.option.ConnectionPassword</name>
+<value>hivepassword</value>
+
+2. In hive-env.sh (append HADOOP_HOME at end of file)
+export HADOOP_HOME=(Location of Hadoop on your system)
+
+3. Replace following values in hive-site.xml:
+
+</property>
+<property>
+<name>hive.exec.local.scratchdir</name>
+<value>${system:java.io.tmpdir}/${system:user.name}</value>
+<description>Local scratch space for Hive jobs</description>
+</property>
+<property>
+<name>hive.downloaded.resources.dir</name>
+<value>${system:java.io.tmpdir}/${hive.session.id}_resources</value>
+<description>Temporary local directory for added resources in the system.
+</description>
+</property>
+
+-----------------
+With these values
+-----------------
+</property>
+<property>
+<name>hive.exec.local.scratchdir</name>
+<value>/tmp/${user.name}</value>
+<description>Local scratch space for Hive jobs</description>
+</property>
+<property>
+<name>hive.downloaded.resources.dir</name>
+<value>/tmp/${user.name}_resources</value>
+<description>Temporary local directory for added resources in the remote files system
+</property>
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 11:- Set Path in bashrc
+
+sudo gedit ~/.bashrc
+
+Add these lines at end of file
+
+export HIVE_HOME=/home/hadoop/Downloads/apache-hive-bin
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 12 :- $schematool -initSchema -dbType mysql
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Step 13 :- $hive
+
+Logging initialized using configuration in jar:file:/usr/lib/hive/apache-hive-0.14.0-bin/lib/hive-common-0.14.0.jar! /hove-log4j.properties
+    hive>
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+Now the HiveQL commands can be used to load, store and analyze data in structured table format from HDFS
+---------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,221 @@
+                                #################################################################################
+                                #                                                                               #
+                                #         Installing Hadoop ecosystem on Single Node Cluster (Localhost)        #
+                                #                                                                               #
+                                #################################################################################
+
+
+1. Install Java 8
+
+a) Install python-software-properties
+
+First download python software properties before adding java repositories .To get it installed execute the following command in terminal :
+
+sudo apt-get install python-software-properties
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+b) Add repository
+
+Now we need to add the repository manually so that Ubuntu can easily install the Java. Use the following command to add java repositories :
+
+sudo add-apt-repository ppa:webupd8team/java
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+c) Now update the source list
+
+sudo apt-get update
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+d) Install Java
+
+The framework of Hadoop is written in Java . so we will start with installing Java . We are using java 8 installer. Use the following command :
+
+sudo apt-get install oracle-java8-installer
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+2. Configure SSH
+
+To get a login to remote machine secured shell (SSH) is used. SSH setup is required to do different operations on a cluster such as starting , stopping , distributed daemon shell operations:
+
+a) Install Open SSh Server-Client
+
+To get a remote login , we have to user SSH tools.
+sudo apt-get install openssh-server openssh-client
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+b) Generate key Pairs
+
+To provide authentication we use , public and private key pair . To generate this pairs , write the following command . After this a message will appear to enter the file in which you want to save the key (/home/mypc/.ssh/id_rsa): just press enter . Default path can be known by using ls command and we can see that two files are made “id_rsa” and “id_rsa.pub” are private and public keys respectively. Use the following command:
+
+ssh-keygen –t rsa –p””
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+c) Configure passwordless ssh
+
+Now we have to copy the contents of “id_rsa.pub” into the “authorized_keys” file .Use the following command :
+
+cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+d) Check by SSH to localhost
+
+ssh localhost
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+3. Installing Hadoop
+
+To get Hadoop-2.6.0-CDH-5.5.1 in pseudo distributed mode . Do the following steps :
+
+Download Hadoop from the below link :
+http://archive.cloudera.com/cdh5/cdh/5/hadoop-2.6.0-cdh5.5.1.tar.gz
+
+Extract all contents of compressed Hadoop file package using the command:
+tar xzf Hadoop-2.6.0-cdh5.5.1.tar.gz
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+4. Setup Configuration
+
+a) Edit .bashrc
+
+Now we have to make changes in Hadoop environment file “.bashrc” . We can search this file in our home directory and can make changes in the file using command :
+nano ~/.bashrc and then pass the following parameters at the end of this file :
+
+export HADOOP_PREFIX=”/home/downloads/Hadoop-2.6.0-cdh5.5.1”
+export PATH=$PATH:$HADOOP_PREFIX/bin
+export PATH=$PATH:$HADOOP_PREFIX/sbin
+export HADOOP_MAPRED_HOME=${HADOOP_PREFIX}
+export HADOOP_COMMON_HOME={HADOOP_PREFIX}
+export HADOOP_HDFS_HOME={HADOOP_PREFIX}
+export YARN_HOME=${HADOOP_PREFIX}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+b) Edit Hadoop-env.sh
+
+Now we need to make changes in Hadoop configuration file “hadoop-env.sh” which is present in configuration directory (HADOOP_HOME/etc/hadoop) and there we need to set JAVA_HOME:
+
+cd hadooop/
+nano hadoop-env.sh
+
+Make sure theat you are in the correct directry while wiritng the commands. On this file change the JAVA_HOME as :
+
+Export JAVA_HOME=/usr/lib/jvm/java-8-oracle/
+
+After changing the path of JAVA_HOME save this file using ctrl+X command
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+c) Edit core-site.xml
+
+Now we need to make changes in Hadoop configuration file core-site.xml (which is located in HADOOP_HOME/etc/hadoop) by executing the below command:
+
+nano core-site.xml
+
+And there add below entries between <configuration> </configuration> which is present at the end of this file:
+
+<property>
+<name>fs.defaultFS</name>
+<value>hdfs://localhost:9000</value>
+</property>
+<property>
+<name>Hadoop.tmp.dir</name>
+</property>
+
+Location of namenode is specified by fs.defaultFS property; we will find the namenode running at 9000 port on localhost.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+d) Edit hdfs-site.xml
+
+Now make changes in Hadoop configuration file hdfs-site.xml using the command:
+
+nano hdfs-site.xml 
+
+And now write the following lines at the end of this file :
+
+<property>
+<name>dfs.replication</name>
+<value>1</value>
+</property>
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+e) Edit mapred-site.xml
+
+Now we need to make changes in Hadoop configuration file mapred-site.xml
+To edit mapred-site.xml file first we need to create a copy ot its template using the command :
+
+cp mapred-site.xml.template mapred-site.xml
+nano mapred-site.xml
+
+And there add below entries between <configuration> </configuration> which is present at the end of this file:
+
+<property>
+<name>
+Mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+
+In order to specify which framework should be used for MapReduce, we use
+mapreduce.framework.name property, yarn is used here.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+f) Edit yarn-site.xml
+
+Now we need to make changes in Hadoop configuration file yarn-site.xml:
+
+nano yarn-site.xml
+
+Add the following entries to the <configuration></configuration> which is present at the end of the file.
+
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+<property>
+<name>yarn.nodemanager.auxservices.mapreduce.shuffle.class
+</name>
+<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+
+In order to specify auxiliary service need to run with node manager nodemanager“yarn.nodemanager.aux-services” property is used. Here Shuffling is used as auxiliary service. And in order to know the class that should be used for shuffling we user “yarn.nodemanager.aux-services.mapreduce.shuffle.class”.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+5 . Start The Hadoop Cluster
+
+a) Format the namenode use the following command :
+hdfs namenode –format
+
+After we install Yarn with Hadoop 2 we need to perform this activity only once if this command is again used that all the data will get deleted and namenode would be assigned some other namespaceId. If namenode and datanode Id’s doesn’t get matched, then the datanode daemons will not start while starting the daemons.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+b) Start HDFS daemons
+start-dfs.sh
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+c)Start YARN Daemons
+start-yarn.sh
+Jps
+
+Output: 
+NameNode
+DataNode
+ResourceManager
+NodeManager
+
+If the above output gets appeared after running jps command, that means you had successfully
+installed Hadoop. HDFS and MapReduce operations can be performed.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+Go to your web browser and type 'localhost:50070' in the address bar.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+

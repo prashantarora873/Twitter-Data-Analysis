@@ -1,0 +1,198 @@
+
+1. Create a table to load tweets
+
+CREATE EXTERNAL TABLE raw_f (
+   id BIGINT,
+   created_at STRING,
+   source STRING,
+   favorited BOOLEAN,
+   retweeted_status STRUCT<
+      text:STRING,
+      `user`:STRUCT<screen_name:STRING,name:STRING>, retweet_count:INT>,
+   entities STRUCT<
+      urls:ARRAY<STRUCT<expanded_url:STRING>>,
+      user_mentions:ARRAY<STRUCT<screen_name:STRING,name:STRING>>,
+      hashtags:ARRAY<STRUCT<text:STRING>>>,
+   text STRING,
+   `user` STRUCT<
+      screen_name:STRING,
+      name:STRING,
+      friends_count:INT,
+      followers_count:INT,
+      statuses_count:INT,
+      verified:BOOLEAN,
+      utc_offset:INT,
+      time_zone:STRING>,
+   in_reply_to_screen_name STRING
+) 
+
+ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+WITH SERDEPROPERTIES ("ignore.malformed.json" = "true")
+LOCATION 'hdfs://localhost:9000/major';
+
+
+*******************************************************************************************************************************************************
+
+2. Create sentiment dictionary (ONE TIME PROCESS)
+
+CREATE EXTERNAL TABLE dictionary (
+    type string,
+    length int,
+    word string,
+    pos string,
+    polarity string
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' 
+STORED AS TEXTFILE;
+
+*******************************************************************************************************************************************************
+
+3. Load dictionary into HDFS
+
+hadoop fs -put /home/mayank/CSE_Dual_Degree_Major_Project/Queries_and_Installing_commands/dictionary.tsv hdfs://localhost:9000/
+
+*******************************************************************************************************************************************************
+
+4. Loading dictionary from hdfs into table
+
+load data inpath '/dictionary.tsv' INTO TABLE dictionary;
+
+*******************************************************************************************************************************************************
+
+5. Load stop words in HDFS
+
+hadoop fs -put /home/mayank/CSE_Dual_Degree_Major_Project/Queries_and_Installing_commands/stop_words.txt hdfs://localhost:9000/
+
+*******************************************************************************************************************************************************
+
+6. Create stop_words table
+
+CREATE EXTERNAL TABLE stopwords (
+word string
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+*******************************************************************************************************************************************************
+
+7. load stop words from hdfs to table stopwords
+
+load data inpath '/stop_words.txt' INTO TABLE stopwords;
+
+*******************************************************************************************************************************************************
+
+8. Clean up tweets
+
+CREATE VIEW simple_tweets AS
+SELECT
+  id,
+  `user`.screen_name,
+  source,
+  retweeted_status.retweet_count,
+  entities.hashtags,
+  cast ( from_unixtime( unix_timestamp(concat( '2016 ', substring(created_at,5,15)), 'yyyy MMM dd hh:mm:ss')) as timestamp) ts,
+  text,
+  `user`.statuses_count,
+  `user`.friends_count,
+  `user`.followers_count,
+  `user`.time_zone  
+FROM raw_f;
+
+
+
+
+
+
+
+*******************************************************************************************************************************************************
+   					                                 ANALYSIS
+*******************************************************************************************************************************************************
+
+1. Remove spam
+
+CREATE VIEW remove_spam AS
+SELECT * 
+FROM simple_tweets 
+WHERE 
+ statuses_count > 50 AND
+ friends_count/followers_count > 0.01 AND
+ length(text) > 10 AND
+ size(hashtags) < 10;
+
+*******************************************************************************************************************************************************
+
+
+2a. Compute sentiment
+
+CREATE VIEW lateral_view AS SELECT id, words FROM raw_f lateral view explode(sentences(lower(text))) dummy AS words;
+
+CREATE VIEW exploded_view AS SELECT id, word FROM lateral_view lateral view explode( words ) dummy AS word;
+
+*******************************************************************************************************************************************************
+
+2b. Clean the tweets (remove stopwords and non english words)
+
+CREATE VIEW remove_stopwords AS SELECT * 
+FROM exploded_view 
+WHERE exploded_view.word NOT IN (SELECT * FROM stopwords) AND regexp_replace(exploded_view.word,'[^a-zA-Z0-9]+','') != '';
+
+*******************************************************************************************************************************************************
+
+2c. Converting polarity into numerical values
+
+CREATE VIEW polarity_numeric AS SELECT 
+    id, 
+    exploded_view.word, 
+    case d.polarity 
+      WHEN  'negative' THEN 0
+      WHEN 'positive' THEN 5 
+      ELSE 2.5 END AS polarity 
+ FROM exploded_view LEFT OUTER JOIN dictionary d ON exploded_view.word = d.word;
+
+*******************************************************************************************************************************************************
+
+2d. Classification into positive, negative and neutral
+
+CREATE TABLE sentiment_classify AS SELECT 
+  id, 
+  case 
+    WHEN AVG( polarity ) > 2.5 THEN 'positive' 
+    WHEN AVG( polarity ) < 2.5 THEN 'negative'  
+    ELSE 'neutral' END AS sentiment 
+ FROM polarity_numeric GROUP BY id;
+
+*******************************************************************************************************************************************************
+
+2e. Sentiments with count
+
+CREATE VIEW sentiment_count AS SELECT 
+ sentiment, 
+COUNT(id) 
+FROM sentiment_classify ts 
+GROUP BY sentiment;
+
+*******************************************************************************************************************************************************
+
+
+3. Top 10 hashtags
+
+CREATE VIEW top_hashtags AS 
+SELECT 
+ ht,
+ COUNT(ht) AS countht 
+FROM raw_f lateral view explode(entities.hashtags.text) dummy AS ht 
+GROUP BY ht 
+ORDER BY countht DESC LIMIT 10;
+ 
+
+*******************************************************************************************************************************************************
+
+4. Top 10 User with most tweets
+
+CREATE VIEW top_users AS SELECT 
+ screen_name, 
+ COUNT(id) AS cnt 
+FROM simple_tweets 
+GROUP BY screen_name HAVING screen_name IS NOT NULL ORDER BY cnt DESC LIMIT 10;
+
+*******************************************************************************************************************************************************
