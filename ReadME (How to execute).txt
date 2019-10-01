@@ -50,15 +50,14 @@
 
 							 _______________________________
 							|   				|
-							|    CREATING TWITTER API	|
+							|    CREATING A TWITTER API	|
 							|_______________________________|
 
 
 
 6. Twitter API requires creation of twitter app and generation of consumer keys and access tokens. The steps to create Twitter API are as follows:
 
-	(a) You need to have a working Twitter account for the authentication purposes. Twitter doesn’t allow access to its data if one doesn’t have 
-	   twitter developer account. So, we need to fill out the details regarding the purpose that we need the data for.
+	(a) You need to have a working Twitter account for the authentication purposes. Twitter doesn’t allow access to its data if one             doesn’t have a twitter developer account. So, we need to fill out the details regarding the purpose that we need the data               for.
 
 	(b) Visit developer portal with and approved developer account to create a Twitter app and generate authentication keys.
 
@@ -81,7 +80,7 @@
 
 7. Configure Flume to copy data to HDFS
 
-	(a) Create a file flume.conf inside /usr/lib /apache-flume-1.6.0bin/conf and add the following parameters in it:	
+	(a) Create a file flume.conf inside /usr/lib /apache-flume-1.6.0bin/conf and add the following parameters into it:	
 
 		# Naming the components on the current agent.
 		TwitterAgent.sources = Twitter
